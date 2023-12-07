@@ -1,1 +1,1 @@
-# rolit with pygame
+# Rollit game with pygame library
