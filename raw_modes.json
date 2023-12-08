@@ -1,0 +1,54 @@
+{
+    "q1": {
+        "question": null,
+        "players": 2,
+        "main_agent": "MinimaxAgent",
+        "own_depth": 2,
+        "evaluation_function": "scoreEvaluationFunction",
+        "opponents_agent": "PartiallyRandomAgent",
+        "opponents_depth": 1,
+        "opponents_config": null,
+        "display_setting": "minimal",
+        "window_size": 800,
+        "load": null
+    },
+    "q2": {
+        "question": null,
+        "players": 2,
+        "main_agent": "AlphaBetaAgent",
+        "own_depth": 2,
+        "evaluation_function": "scoreEvaluationFunction",
+        "opponents_agent": "PartiallyRandomAgent",
+        "opponents_depth": 1,
+        "opponents_config": null,
+        "display_setting": "minimal",
+        "window_size": 800,
+        "load": null
+    },
+    "q3": {
+        "question": null,
+        "players": 2,
+        "main_agent": "ExpectimaxAgent",
+        "own_depth": 2,
+        "evaluation_function": "scoreEvaluationFunction",
+        "opponents_agent": "PartiallyRandomAgent",
+        "opponents_depth": 1,
+        "opponents_config": null,
+        "display_setting": "minimal",
+        "window_size": 800,
+        "load": null
+    },
+    "q4": {
+        "question": null,
+        "players": 2,
+        "main_agent": "AlphaBetaAgent",
+        "own_depth": 2,
+        "evaluation_function": "betterEvaluationFunction",
+        "opponents_agent": "PartiallyRandomAgent",
+        "opponents_depth": 1,
+        "opponents_config": null,
+        "display_setting": "minimal",
+        "window_size": 800,
+        "load": null
+    }
+}

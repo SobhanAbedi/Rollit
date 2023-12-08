@@ -1,6 +1,8 @@
 from Agents import Agent
 import util
 import random
+from typing import List
+
 
 class ReflexAgent(Agent):
     """
@@ -71,7 +73,7 @@ class MultiAgentSearchAgent(Agent):
     is another abstract class.
     """
 
-    def __init__(self, evalFn = 'scoreEvaluationFunction', depth = '2', **kwargs):
+    def __init__(self, evalFn = 'scoreEvaluationFunction', depth = '4', **kwargs):
         self.index = 0 # your agent always has index 0
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
@@ -98,7 +100,37 @@ class MinimaxAgent(MultiAgentSearchAgent):
         self.evaluationFunction(gameState) -> float
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
+        _, action = self.chose_action(state, 0)
+        return action
+
+    def chose_action(self, state, cur_depth):
+        """This function recursively finds the best action given the initial state and depth limit."""
+        agent_count = state.getNumAgents()
+        if state.isGameFinished() or cur_depth == self.depth:
+            return self.evaluationFunction(state), ""
+        index = cur_depth % agent_count
+        action_list = state.getLegalActions(index)
+        nxt_depth = cur_depth + 1
+        if index == 0:
+            chosen_act_val = 0
+            chosen_act: tuple[int, int] = (-1, -1)
+            for action in action_list:
+                nxt_state = state.generateSuccessor(0, action)
+                nxt_value, _ = self.chose_action(nxt_state, nxt_depth)
+                if nxt_value > chosen_act_val:
+                    chosen_act_val = nxt_value
+                    chosen_act = action
+        else:
+            chosen_act_val = 64
+            chosen_act: tuple[int, int] = (-1, -1)
+            for action in action_list:
+                nxt_state = state.generateSuccessor(index, action)
+                nxt_value, _ = self.chose_action(nxt_state, nxt_depth)
+                if nxt_value < chosen_act_val:
+                    chosen_act_val = nxt_value
+                    chosen_act = action
+        return chosen_act_val, chosen_act
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -109,15 +141,57 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(**kwargs)
 
-    def getAction(self, gameState):
+    def getAction(self, state):
         """
         Returns the minimax action using self.depth and self.evaluationFunction
 
         You should keep track of alpha and beta in each node to be able to implement alpha-beta pruning.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
-        
+        # util.raiseNotDefined()
+        _, action = self.chose_action(state, 0, 0, 64)
+        return action
+
+    def chose_action(self, state, cur_depth, lower_threshold, upper_threshold):
+        """
+        This function recursively finds the best action given the initial state and depth limit.
+        Alpha-Beta pruning is also implemented.
+        """
+        agent_count = state.getNumAgents()
+        if state.isGameFinished() or cur_depth == self.depth:
+            return self.evaluationFunction(state), ""
+        index = cur_depth % agent_count
+        action_list = state.getLegalActions(index)
+        nxt_depth = cur_depth + 1
+        if index == 0:
+            chosen_act_val = 0
+            chosen_act: tuple[int, int] = (-1, -1)
+            for action in action_list:
+                nxt_state = state.generateSuccessor(index, action)
+                nxt_value, _ = self.chose_action(nxt_state, nxt_depth, lower_threshold, upper_threshold)
+                if nxt_value > chosen_act_val:
+                    chosen_act_val = nxt_value
+                    chosen_act = action
+                if chosen_act_val > upper_threshold:
+                    return chosen_act_val, ""
+                if chosen_act_val > lower_threshold:
+                    lower_threshold = chosen_act_val
+            return chosen_act_val, chosen_act
+        else:
+            chosen_act_val = 64
+            chosen_act: tuple[int, int] = (-1, -1)
+            for action in action_list:
+                nxt_state = state.generateSuccessor(index, action)
+                nxt_value, _ = self.chose_action(nxt_state, nxt_depth, lower_threshold, upper_threshold)
+                if nxt_value < chosen_act_val:
+                    chosen_act_val = nxt_value
+                    chosen_act = action
+                if chosen_act_val < lower_threshold:
+                    return chosen_act_val, ""
+                if chosen_act_val < upper_threshold:
+                    upper_threshold = chosen_act_val
+            return chosen_act_val, chosen_act
+
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
@@ -127,7 +201,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(**kwargs)
 
-    def getAction(self, gameState):
+    def getAction(self, state):
         """
         Returns the expectimax action using self.depth and self.evaluationFunction
 
@@ -135,7 +209,48 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
+        _, action = self.chose_action(state, 0, 0)
+        return action
+
+    def chose_action(self, state, cur_depth, lower_threshold):
+        """
+        This function recursively finds the best action given the initial state and depth limit using Expectimax alg.
+        When agent_count == 4, this function only considers expectimax pruning for first average node layer.
+        If we implement pruning in second or third layer, not calculating average value of those layers fully, will
+        introduce complications in the first average layer due to under-reporting of average values and it will
+        lead to poor choices.
+        """
+        agent_count = state.getNumAgents()
+        if state.isGameFinished() or cur_depth == self.depth:
+            return self.evaluationFunction(state), ""
+        index = cur_depth % agent_count
+        action_list = state.getLegalActions(index)
+        nxt_depth = cur_depth + 1
+        if index == 0:
+            chosen_act_val = -1
+            chosen_act: tuple[int, int] = (-1, -1)
+            for action in action_list:
+                nxt_state = state.generateSuccessor(index, action)
+                nxt_value, _ = self.chose_action(nxt_state, nxt_depth, lower_threshold)
+                if nxt_value > chosen_act_val:
+                    chosen_act_val = nxt_value
+                    chosen_act = action
+                if chosen_act_val > lower_threshold:
+                    lower_threshold = chosen_act_val
+            return chosen_act_val, chosen_act
+        else:
+            action_count = len(action_list)
+            total_value = 0
+            for i in range(action_count):
+                action = action_list[i]
+                nxt_state = state.generateSuccessor(index, action)
+                nxt_value, _ = self.chose_action(nxt_state, nxt_depth, lower_threshold)
+                total_value += nxt_value
+                if index == 1:
+                    if total_value < 64 * (i + 1) - action_count * (64 - lower_threshold):
+                        return total_value / (i + 1.0), ""
+            return total_value / action_count, ""
 
 
 def betterEvaluationFunction(currentGameState):
@@ -149,14 +264,14 @@ def betterEvaluationFunction(currentGameState):
     The paper: Sannidhanam, Vaishnavi, and Muthukaruppan Annamalai. "An analysis of heuristics in othello." (2015).
 
     Here are also some functions you will need to use:
-    
+
     gameState.getPieces(index) -> list
     gameState.getCorners() -> 4-tuple
     gameState.getScore() -> list
     gameState.getScore(index) -> int
 
     """
-    
+
     "*** YOUR CODE HERE ***"
 
     # parity
@@ -166,7 +281,7 @@ def betterEvaluationFunction(currentGameState):
     # mobility
 
     # stability
-    
+
     util.raiseNotDefined()
 
 # Abbreviation

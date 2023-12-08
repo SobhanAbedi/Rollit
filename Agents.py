@@ -102,6 +102,8 @@ class DestroyZeroAgent(Agent):
             chosen_act = ""
             for action in action_list:
                 nxt_state = state.generateSuccessor(index, action)
+                # There's a bug in the next line that I don't think was introduced by me. nxt_state should be changed to
+                # nxt_action even though it's redundant
                 nxt_value, nxt_state = self.chose_action(nxt_state, nxt_depth, nxt_index)
                 if nxt_value > chosen_act_val:
                     chosen_act_val = nxt_value
