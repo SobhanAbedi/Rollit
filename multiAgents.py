@@ -1,7 +1,8 @@
 from Agents import Agent
 import util
 import random
-from typing import List
+from typing import List, Tuple
+from Game import GameState
 
 
 class ReflexAgent(Agent):
@@ -73,7 +74,7 @@ class MultiAgentSearchAgent(Agent):
     is another abstract class.
     """
 
-    def __init__(self, evalFn = 'scoreEvaluationFunction', depth = '4', **kwargs):
+    def __init__(self, evalFn = 'betterEvaluationFunction', depth = '4', **kwargs):
         self.index = 0 # your agent always has index 0
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
@@ -100,7 +101,6 @@ class MinimaxAgent(MultiAgentSearchAgent):
         self.evaluationFunction(gameState) -> float
         """
         "*** YOUR CODE HERE ***"
-        # util.raiseNotDefined()
         _, action = self.chose_action(state, 0)
         return action
 
@@ -148,7 +148,6 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         You should keep track of alpha and beta in each node to be able to implement alpha-beta pruning.
         """
         "*** YOUR CODE HERE ***"
-        # util.raiseNotDefined()
         _, action = self.chose_action(state, 0, 0, 64)
         return action
 
@@ -253,7 +252,68 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             return total_value / action_count, ""
 
 
-def betterEvaluationFunction(currentGameState):
+def get_possible_actions(state: GameState, agent_count):
+    legal_actions_list = [set()]*agent_count
+    for i in range(agent_count):
+        current_pieces = state.getPieces(i)
+        current_legal_actions_list = []
+        for k in range(agent_count - 1):
+            if k != i:
+                current_legal_actions_list.append(legal_actions_list[k])
+        for piece in current_pieces:
+            for dir in [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (1, -1), (-1, 1), (-1, -1)]:
+                pos = (piece[0] + dir[0], piece[1] + dir[1])
+                if state.isWithinBorders(pos) and state.data.board[pos[0]][pos[1]] == -1:
+                    for legal_actions in current_legal_actions_list:
+                        legal_actions.add(pos)
+    return legal_actions_list
+
+
+def count_stable_pieces(state: GameState, corners, index) -> int:
+    if index not in corners:
+        return 0
+    board = state.data.board
+    from_top = [0]*8
+    from_bottom = [0]*8
+    top_max = bottom_max = 8
+    for i in range(8):
+        for j in range(top_max):
+            if board[j][i] != index:
+                top_max = j
+                break
+        from_top[i] = top_max
+        for j in range(bottom_max):
+            if board[7-j][i] != index:
+                bottom_max = j
+                break
+        from_bottom[i] = bottom_max
+    top_max = bottom_max = 8
+    for i in range(7, -1, -1):
+        for j in range(top_max):
+            if board[j][i] != index:
+                top_max = j
+                break
+        if top_max > from_top[i]:
+            from_top[i] = top_max
+        else:
+            break
+    for i in range(7, -1, -1):
+        for j in range(bottom_max):
+            if board[7-j][i] != index:
+                bottom_max = j
+                break
+        if bottom_max > from_bottom[i]:
+            from_bottom[i] = bottom_max
+        else:
+            break
+    total_stable_pieces = 0
+    for i in range(8):
+        col_stable = min(8, from_top[i] + from_bottom[i])
+        total_stable_pieces += col_stable
+    return total_stable_pieces
+
+
+def betterEvaluationFunction(currentGameState: GameState):
     """
     Your extreme evaluation function.
 
@@ -273,16 +333,73 @@ def betterEvaluationFunction(currentGameState):
     """
 
     "*** YOUR CODE HERE ***"
+    agent_count = currentGameState.getNumAgents()
 
     # parity
+    agents_parity_score = currentGameState.getScore()
+    sum_of_scores = sum(agents_parity_score)
+    parity_score = (3 * agents_parity_score[0] - sum_of_scores - max(agents_parity_score[1:])) / (2 * sum_of_scores)
 
     # corners
+    agents_corner_score = [0]*agent_count
+    corners = currentGameState.getCorners()
+    for corner in corners:
+        if corner != -1:
+            agents_corner_score[corner] += 1
+    corner_score = 0
+    sum_of_scores = sum(agents_corner_score)
+    if sum_of_scores > 0:
+        corner_score = (3 * agents_corner_score[0] - sum_of_scores - max(agents_corner_score[1:])) / (2 * sum_of_scores)
 
     # mobility
+    possible_agents_actions = get_possible_actions(currentGameState, agent_count)
+    legal_agent_actions = []
+    agents_action_count = [0]*agent_count
+    agents_possible_action_count = [0] * agent_count
+    for i in range(agent_count):
+        legal_actions = currentGameState.getLegalActions(i)
+        legal_agent_actions.append(legal_actions)
+        agents_action_count[i] = len(legal_actions)
+        agents_possible_action_count[i] = len(possible_agents_actions[i])
+    actual_mobility_score = 0
+    sum_of_scores = sum(agents_action_count)
+    if sum_of_scores > 0:
+        actual_mobility_score = (3 * agents_action_count[0] - sum_of_scores -
+                                 max(agents_action_count[1:])) / (2 * sum_of_scores)
+    potential_mobility_score = 0
+    sum_of_scores = sum(agents_possible_action_count)
+    if sum_of_scores > 0:
+        potential_mobility_score = (3 * agents_possible_action_count[0] - sum_of_scores -
+                                    max(agents_possible_action_count[1:])) / (2 * sum_of_scores)
+
+    agents_potential_action_count = [0]*agent_count
+    for i in range(agent_count):
+        agents_potential_action_count[i] = len(currentGameState.getPossibleActionsSimplified())
 
     # stability
-
-    util.raiseNotDefined()
+    initial_pieces: List[Tuple[int, int]] = currentGameState.getPieces(0)
+    initial_piece_count = len(initial_pieces)
+    not_unstable_pieces = set(initial_pieces)
+    for i in range(1, agent_count):
+        for action in legal_agent_actions[i]:
+            nxt_state = currentGameState.generateSuccessor(i, action)
+            nxt_pieces = nxt_state.getPieces(0)
+            not_unstable_pieces = not_unstable_pieces.intersection(nxt_pieces)
+    unstable_piece_count = initial_piece_count - len(not_unstable_pieces)
+    stable_piece_count = [0]*agent_count
+    for i in range(agent_count):
+        stable_piece_count[i] = count_stable_pieces(currentGameState, corners, i)
+    sum_of_stables = sum(stable_piece_count)
+    stability_score = ((3 * stable_piece_count[0] - sum_of_stables - unstable_piece_count) /
+                       (initial_piece_count + sum_of_stables))
+    score = (
+            parity_score * 0.12 +
+            corner_score * 0.35 +
+            actual_mobility_score * 0.15 + potential_mobility_score * 0.12 +
+            stability_score * 0.26
+             )
+    score = 32 * (score + 1)
+    return score
 
 # Abbreviation
 better = betterEvaluationFunction
