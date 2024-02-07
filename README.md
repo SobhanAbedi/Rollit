@@ -40,4 +40,4 @@ Two examples:
 ```python rollit.py -q q4```
 
 ## Game Environment
-<video width="400" height="400" src="/git-media/sample.mp4"></video>
+<video width="400" height="400" src="https://github.com/SobhanAbedi/Rollit/assets/19432900/b1853e05-8828-4c2a-946a-54ca02068d7b">/git-media/sample.mp4</video>
